@@ -1,0 +1,20 @@
+[Unit]
+Description=Control Plane FastAPI service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=CONTROL_PLANE_API_HOST=0.0.0.0
+Environment=CONTROL_PLANE_API_PORT=8000
+WorkingDirectory=%h/projects/control-plane
+EnvironmentFile=%h/.config/control-plane/control-plane.env
+ExecStart=%h/projects/control-plane/.venv/bin/uvicorn controlplane.api.server:app --host ${CONTROL_PLANE_API_HOST} --port ${CONTROL_PLANE_API_PORT}
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

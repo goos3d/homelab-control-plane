@@ -1,0 +1,129 @@
+$stone: #d0c9ad;
+$iron: #68675c;
+$black: #090a08;
+$slab: #141611;
+$gold: #b79457;
+$moss: #879965;
+$amber: #d1a34a;
+
+Screen {
+    background: $black;
+    color: $stone;
+}
+
+Header, Footer {
+    background: #242117;
+    color: $gold;
+}
+
+#main {
+    height: 1fr;
+    padding: 1 2;
+}
+
+.section-title {
+    height: 2;
+    margin-top: 1;
+    text-style: bold;
+    color: $gold;
+}
+
+#node-health, #controller-health {
+    height: 3;
+    border: ascii $iron;
+    padding: 0 1;
+    content-align: left middle;
+    background: $slab;
+}
+
+#controller-health {
+    margin-top: 1;
+}
+
+.planned {
+    height: 3;
+    border: ascii #48493f;
+    padding: 0 1;
+    color: #77796c;
+    content-align: left middle;
+    background: #10110e;
+}
+
+#guest-table {
+    height: 16;
+    border: ascii $iron;
+    background: $slab;
+    color: $stone;
+}
+
+#guest-table > .datatable--header {
+    background: #302b1d;
+    color: $gold;
+    text-style: bold;
+}
+
+#guest-table > .datatable--cursor {
+    background: $gold;
+    color: $black;
+}
+
+#actions {
+    height: 5;
+    align: center middle;
+}
+
+Button {
+    min-width: 16;
+    margin: 1;
+    background: #25251e;
+    color: $stone;
+    border: ascii $iron;
+}
+
+Button:hover, Button:focus {
+    background: $gold;
+    color: $black;
+}
+
+Button:disabled {
+    background: #11120f;
+    color: #4d4e45;
+    border: ascii #34352f;
+}
+
+#selection, #task-status {
+    height: 3;
+    padding: 0 1;
+    border: ascii $iron;
+    content-align: left middle;
+    background: $slab;
+}
+
+#task-status {
+    margin-top: 1;
+    color: $amber;
+}
+
+
+#recent-activity {
+    margin-bottom: 1;
+}
+
+#backup-job {
+    height: 3;
+    padding: 0 1;
+    border: ascii $iron;
+    content-align: left middle;
+    background: $slab;
+}
+
+#backup-actions {
+    height: 4;
+    align: center middle;
+}
+
+#backup-history {
+    height: 9;
+    border: ascii $iron;
+    background: $slab;
+}

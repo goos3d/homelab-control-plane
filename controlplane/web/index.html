@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090a08">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Control Plane">
+  <title>Control Plane</title>
+  <style>
+    :root { --bg:#090a08; --panel:#151713; --stone:#d0c9ad; --dim:#68675c; --gold:#b79457; --moss:#879965; --amber:#d1a34a; --red:#bd6455; }
+    * { box-sizing:border-box; }
+    html { background:var(--bg); }
+    body { margin:0; min-height:100dvh; color:var(--stone); background:repeating-linear-gradient(135deg,#0d0e0b 0 2px,var(--bg) 2px 8px); font-family:Consolas,"Lucida Console","Courier New",monospace; padding:calc(env(safe-area-inset-top) + 18px) 14px calc(env(safe-area-inset-bottom) + 24px); }
+    body::after { content:""; position:fixed; inset:0; pointer-events:none; opacity:.14; background:repeating-linear-gradient(0deg,transparent 0 31px,#4f5048 32px); }
+    main { width:min(820px,100%); margin:auto; position:relative; z-index:1; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:4px 0 18px; padding:10px 12px; border:3px double var(--dim); background:#15150f; }
+    h1 { font-size:clamp(18px,5vw,27px); letter-spacing:.06em; margin:0; color:var(--gold); }
+    h2 { font-size:13px; letter-spacing:.12em; margin:0; color:var(--gold); }
+    h2::before { content:"[ "; color:var(--dim); } h2::after { content:" ]"; color:var(--dim); }
+    .panel { border:2px solid var(--dim); background:var(--panel); box-shadow:inset 0 0 0 1px #050604,3px 3px 0 #020302; }
+    .section-head { display:flex; justify-content:space-between; align-items:center; margin:16px 2px 9px; }
+    .hidden,[hidden] { display:none !important; }
+    .version,.meta,.hint { color:#8d8a79; font-size:11px; line-height:1.5; }
+    .identity { display:flex; align-items:center; gap:8px; font-size:11px; }
+    .role { color:var(--gold); text-transform:uppercase; }
+    button { appearance:none; border:2px solid var(--dim); border-radius:0; background:#24251e; color:var(--stone); font:700 12px inherit; min-height:42px; padding:9px 12px; touch-action:manipulation; box-shadow:2px 2px 0 #030403; }
+    button::before { content:"[ "; } button::after { content:" ]"; }
+    button:active:not(:disabled) { background:var(--gold); color:var(--bg); transform:translate(1px,1px); box-shadow:none; }
+    button:disabled { opacity:.3; cursor:not-allowed; }
+    input,textarea { width:100%; border:2px solid var(--dim); border-radius:0; background:#11120f; color:var(--stone); font:inherit; padding:11px; }
+    label { display:block; margin:12px 0 5px; font-size:11px; font-weight:700; }
+    #login-view { width:min(430px,100%); margin:10vh auto 0; padding:22px; }
+    #login-view h2 { margin-bottom:12px; }
+    #login-view button { width:100%; margin-top:16px; }
+    .error-text { min-height:18px; margin-top:12px; color:var(--red); font-size:12px; }
+    .status-card,#node,.guest,.minecraft-card { padding:13px; }
+    .node-title,.card-top { display:flex; justify-content:space-between; gap:10px; align-items:center; font-weight:700; }
+    .online,.running { color:var(--moss); } .offline,.error { color:var(--red); } .stopped,.unknown { color:var(--amber); }
+    .metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .metric { border-left:2px solid #55554a; padding-left:8px; color:#aaa58f; font-size:12px; }
+    .metric strong { display:block; color:var(--stone); font-size:16px; margin-top:3px; }
+    .planned-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .planned-card { padding:13px; color:#77796c; }
+    #guests,#minecraft-servers { display:grid; gap:10px; }
+    .guest-top { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; }
+    .vmid { color:var(--bg); background:var(--gold); padding:5px 7px; font-weight:900; }
+    .name { font-weight:800; overflow:hidden; text-overflow:ellipsis; }
+    .actions { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:12px; }
+    .shutdown { color:var(--amber); border-color:#9e7000; } .reboot { color:#ff8d85; border-color:#8d332e; }
+    .protected { border-color:#4e4e45; opacity:.78; }
+    .lock,.unavailable { color:var(--amber); font-size:11px; margin-top:10px; line-height:1.45; }
+    #wonton26-whitelist { margin-top:10px; padding:13px; }
+    .whitelist-players { display:grid; gap:7px; margin-top:12px; }
+    .whitelist-player { display:flex; justify-content:space-between; align-items:center; gap:10px; border-left:2px solid #55554a; padding-left:8px; font-size:12px; }
+    .whitelist-player button { min-height:34px; padding:5px 9px; }
+    .protected-label { color:var(--amber); font-size:10px; font-weight:700; }
+    .whitelist-form { display:grid; grid-template-columns:1fr auto; gap:7px; margin-top:12px; }
+    #status { position:sticky; bottom:calc(env(safe-area-inset-bottom) + 8px); margin-top:14px; padding:12px 14px; color:var(--amber); font-size:12px; backdrop-filter:blur(8px); }
+    #status.success { color:var(--moss); } #status.error { color:var(--red); }
+    @media (min-width:640px) { #guests,#minecraft-servers { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="login-view" class="panel">
+      <h2>AUTHENTICATION</h2>
+      <div class="hint">Sign in to the Homelab Control Plane.</div>
+      <form id="login-form">
+        <label for="username">USERNAME</label>
+        <input id="username" name="username" autocomplete="username" required>
+        <label for="password">PASSWORD</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit">SIGN IN</button>
+      </form>
+      <div id="login-error" class="error-text" aria-live="polite"></div>
+    </section>
+
+    <section id="app-view" hidden>
+      <header>
+        <div><h1>MOUNTAINHOME CONTROL PLANE</h1><span class="version">FORTRESS LEDGER // III</span></div>
+        <div class="identity"><span id="identity"></span><button id="logout">LOG OUT</button></div>
+      </header>
+
+      <section id="admin-view" hidden>
+        <div class="section-head"><h2>INFRASTRUCTURE</h2><button class="refresh">REFRESH</button></div>
+        <section id="node" class="panel"><div class="node-title"><span>PVE01</span><span>CONNECTING</span></div></section>
+        <section class="planned-grid">
+          <article id="controller" class="panel planned-card"></article>
+          <article id="nas" class="panel planned-card"></article>
+        </section>
+        <div class="section-head"><h2>GUEST OPERATIONS</h2></div>
+        <section id="guests"></section>
+      </section>
+
+      <section id="minecraft-view" hidden>
+        <div class="section-head"><h2>MINECRAFT SERVERS</h2><button class="refresh">REFRESH</button></div>
+        <div id="minecraft-note" class="panel planned-card"></div>
+        <section id="minecraft-servers"></section>
+        <section id="wonton26-whitelist" class="panel" hidden></section>
+      </section>
+      <div id="status" class="panel">SYSTEM READY</div>
+    </section>
+  </main>
+  <script>
+    const protectedVmid = 100;
+    const nodeEl = document.querySelector('#node');
+    const controllerEl = document.querySelector('#controller');
+    const nasEl = document.querySelector('#nas');
+    const guestsEl = document.querySelector('#guests');
+    const statusEl = document.querySelector('#status');
+
+    let currentUser = null;
+    let csrfToken = '';
+    let actionRunning = false;
+    let whitelistRunning = false;
+    let whitelistPlayers = [];
+    let whitelistRequest = 0;
+
+    function setStatus(message, kind = '') {
+      statusEl.textContent = message;
+      statusEl.className = `panel ${kind}`;
+    }
+
+    function hasPermission(permission) {
+      const permissions = currentUser?.permissions || [];
+      return permissions.includes('*') || permissions.includes(permission);
+    }
+
+    async function api(path, options = {}) {
+      const method = (options.method || 'GET').toUpperCase();
+      const headers = new Headers(options.headers || {});
+
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && csrfToken) {
+        headers.set('X-CSRF-Token', csrfToken);
+      }
+
+      const response = await fetch(path, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        ...options,
+        headers
+      });
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {}
+
+      if (!response.ok) {
+        if (response.status === 401 && path !== '/api/v1/auth/login') {
+          showLogin('Your session expired. Sign in again.');
+        }
+        throw new Error(data.detail || `HTTP ${response.status}`);
+      }
+
+      return data;
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement('span');
+      element.textContent = String(value);
+      return element.innerHTML;
+    }
+
+    function showLogin(message = '') {
+      currentUser = null;
+      csrfToken = '';
+      document.querySelector('#app-view').hidden = true;
+      document.querySelector('#login-view').hidden = false;
+      document.querySelector('#login-error').textContent = message;
+    }
+
+    function showApp(user) {
+      currentUser = user;
+
+      document.querySelector('#login-view').hidden = true;
+      document.querySelector('#app-view').hidden = false;
+
+      document.querySelector('#identity').innerHTML =
+        `${escapeHtml(user.username)} // <span class="role">${escapeHtml(user.role)}</span>`;
+
+      const admin = user.role === 'admin';
+
+      document.querySelector('#admin-view').hidden = !admin;
+      document.querySelector('#minecraft-view').hidden = false;
+
+      if (admin) {
+        refreshAdmin();
+        refreshMinecraft();
+      } else {
+        refreshMinecraft();
+      }
+    }
+
+    function renderStatusCard(element, {
+      name,
+      status,
+      detail = '',
+      metrics = []
+    }) {
+      const normalized = String(status).toLowerCase();
+
+      element.className =
+        `panel status-card ${normalized === 'planned' ? 'planned-card' : ''}`;
+
+      element.innerHTML = `
+        <div class="node-title">
+          <span>${escapeHtml(name).toUpperCase()}</span>
+          <span class="${normalized}">${escapeHtml(status).toUpperCase()}</span>
+        </div>
+        ${detail ? `<div class="meta">${escapeHtml(detail)}</div>` : ''}
+        ${metrics.length ? `
+          <div class="metrics">
+            ${metrics.map(item => `
+              <div class="metric">
+                ${escapeHtml(item.label)}
+                <strong>${escapeHtml(item.value)}</strong>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
+
+    function formatUptime(seconds) {
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      return days ? `${days}d ${hours}h` : `${hours}h`;
+    }
+
+    function formatBytes(value) {
+      return value >= 1024 ** 4
+        ? `${(value / 1024 ** 4).toFixed(1)} TB`
+        : `${(value / 1024 ** 3).toFixed(1)} GB`;
+    }
+
+    function renderAdminGuests(guests) {
+      guestsEl.replaceChildren(...guests.map(guest => {
+        const card = document.createElement('article');
+        const running = guest.status === 'running';
+        const locked = guest.vmid === protectedVmid;
+
+        card.className = `guest panel ${locked ? 'protected' : ''}`;
+
+        card.innerHTML = `
+          <div class="guest-top">
+            <span class="vmid">${guest.vmid}</span>
+            <div>
+              <div class="name">${escapeHtml(guest.name)}</div>
+              <div class="meta">
+                ${escapeHtml(guest.type).toUpperCase()} // ${escapeHtml(guest.node)}
+              </div>
+            </div>
+            <span class="${escapeHtml(guest.status)}">
+              ${escapeHtml(guest.status).toUpperCase()}
+            </span>
+          </div>
+
+          <div class="actions">
+            <button data-action="start"
+              ${locked || running || actionRunning ? 'disabled' : ''}>
+              START
+            </button>
+
+            <button class="shutdown" data-action="shutdown"
+              ${locked || !running || actionRunning ? 'disabled' : ''}>
+              SHUTDOWN
+            </button>
+
+            <button class="reboot" data-action="reboot"
+              ${locked || !running || actionRunning ? 'disabled' : ''}>
+              REBOOT
+            </button>
+          </div>
+
+          ${locked
+            ? '<div class="lock">LOCKED // CONTROL PLANE PROTECTED</div>'
+            : ''}
+        `;
+
+        card.querySelectorAll('[data-action]').forEach(button =>
+          button.addEventListener(
+            'click',
+            () => runAdminAction(guest, button.dataset.action)
+          )
+        );
+
+        return card;
+      }));
+    }
+
+    async function refreshAdmin({ quiet = false } = {}) {
+      try {
+        const dashboard = await api('/api/v1/dashboard');
+
+        renderStatusCard(nodeEl, {
+          name: dashboard.node.name,
+          status: dashboard.node.status,
+          metrics: [
+            {
+              label: 'CPU',
+              value: `${dashboard.node.cpu_percent.toFixed(1)}%`
+            },
+            {
+              label: 'MEM',
+              value: `${dashboard.node.memory_percent.toFixed(1)}%`
+            },
+            {
+              label: 'DISK',
+              value: `${dashboard.node.disk_percent.toFixed(1)}%`
+            }
+          ]
+        });
+
+        renderStatusCard(controllerEl, {
+          name: 'Controller',
+          status: dashboard.controller.status,
+          detail:
+            `${dashboard.controller.hostname} // API ${dashboard.controller.api_status.toUpperCase()}`,
+          metrics: [
+            {
+              label: 'CPU',
+              value: `${dashboard.controller.cpu_percent.toFixed(1)}%`
+            },
+            {
+              label: 'MEM',
+              value: `${dashboard.controller.memory_percent.toFixed(1)}%`
+            },
+            {
+              label: 'UP',
+              value: formatUptime(dashboard.controller.uptime_seconds)
+            }
+          ]
+        });
+
+        renderStatusCard(nasEl, {
+          name: dashboard.nas.name,
+          status: dashboard.nas.status,
+          detail: dashboard.nas.mount_path,
+          metrics: [
+            {
+              label: 'USED',
+              value: formatBytes(dashboard.nas.storage_used_bytes)
+            },
+            {
+              label: 'TOTAL',
+              value: formatBytes(dashboard.nas.storage_total_bytes)
+            },
+            {
+              label: 'FREE',
+              value: formatBytes(dashboard.nas.storage_free_bytes)
+            }
+          ]
+        });
+
+        renderAdminGuests(dashboard.guests);
+
+        if (!quiet && !actionRunning) {
+          setStatus(`ONLINE // ${dashboard.guests.length} GUESTS`);
+        }
+      } catch (error) {
+        if (currentUser) {
+          setStatus(`LINK FAILURE // ${error.message}`, 'error');
+        }
+      }
+    }
+
+    function renderMinecraft(servers) {
+      const admin = currentUser.role === 'admin';
+      const canStart = hasPermission('minecraft.start');
+      const canStop = hasPermission('minecraft.stop');
+      const canReboot = hasPermission('minecraft.reboot');
+
+      /*
+       * Admin already sees Minecraft VMs 104 and 105 under Guest Operations.
+       * Only show external/physical Minecraft hosts here.
+       */
+      const visibleServers = admin
+        ? servers.filter(server => server.id === 'fambam22')
+        : servers;
+
+      const heading = document.querySelector(
+        '#minecraft-view .section-head h2'
+      );
+
+      if (admin) {
+        heading.textContent = 'PHYSICAL SERVICES';
+        document.querySelector('#minecraft-note').textContent =
+          'DEDICATED HOSTS // Systems operating outside Proxmox.';
+      } else {
+        heading.textContent = 'MINECRAFT SERVERS';
+        document.querySelector('#minecraft-note').textContent =
+          'MINECRAFT SERVICES // Proxmox servers share resources; physical servers operate independently.';
+      }
+
+      const container = document.querySelector('#minecraft-servers');
+
+      container.replaceChildren(...visibleServers.map(server => {
+        const running = server.status === 'running';
+        const physical = server.id === 'fambam22';
+        const card = document.createElement('article');
+
+        card.className = 'minecraft-card panel';
+
+        if (physical) {
+          const canShutdown = canStop;
+
+          card.innerHTML = `
+            <div class="guest-top">
+              <span class="vmid">PHY</span>
+
+              <div>
+                <div class="name">${escapeHtml(server.name)}</div>
+                <div class="meta">
+                  BARE METAL // ${escapeHtml(server.host)}
+                </div>
+              </div>
+
+              <span class="${escapeHtml(server.status)}">
+                ${escapeHtml(server.status).toUpperCase()}
+              </span>
+            </div>
+
+            <div class="meta" style="margin-top:8px;">
+              ${escapeHtml(server.address)}:${server.port}
+            </div>
+
+            <div class="actions" style="grid-template-columns:1fr 1fr;">
+              ${canStart ? `
+                <button
+                  data-action="fambam-start"
+                  ${running || actionRunning ? 'disabled' : ''}>
+                  START
+                </button>
+              ` : ''}
+
+              ${canShutdown ? `
+                <button
+                  class="shutdown"
+                  data-action="fambam-stop"
+                  ${!running || actionRunning ? 'disabled' : ''}>
+                  SHUTDOWN
+                </button>
+              ` : ''}
+            </div>
+          `;
+
+          const startButton =
+            card.querySelector('[data-action="fambam-start"]');
+
+          if (startButton) {
+            startButton.addEventListener(
+              'click',
+              () => runFambamStart(server)
+            );
+          }
+
+          const shutdownButton =
+            card.querySelector('[data-action="fambam-stop"]');
+
+          if (shutdownButton) {
+            shutdownButton.addEventListener(
+              'click',
+              () => runFambamShutdown(server)
+            );
+          }
+
+          return card;
+        }
+
+        const actions = (canStart || canStop || canReboot) ? `
+          <div class="actions">
+            ${canStart ? `<button data-action="start"
+              ${!server.start_available || actionRunning ? 'disabled' : ''}
+              title="${escapeHtml(server.unavailable_reason || '')}">
+              START
+            </button>` : ''}
+
+            ${canStop ? `<button class="shutdown" data-action="stop"
+              ${!running || actionRunning ? 'disabled' : ''}>
+              STOP
+            </button>` : ''}
+
+            ${canReboot ? `<button class="reboot" data-action="reboot"
+              ${!running || actionRunning ? 'disabled' : ''}>
+              REBOOT
+            </button>` : ''}
+          </div>
+        ` : '';
+
+        card.innerHTML = `
+          <div class="card-top">
+            <div>
+              <span class="vmid">${server.vmid}</span>
+              <span class="name">${escapeHtml(server.name)}</span>
+            </div>
+
+            <span class="${escapeHtml(server.status)}">
+              ${escapeHtml(server.status).toUpperCase()}
+            </span>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              CPU
+              <strong>${server.cpu_percent.toFixed(1)}%</strong>
+            </div>
+
+            <div class="metric">
+              MEM
+              <strong>${server.memory_percent.toFixed(1)}%</strong>
+            </div>
+
+            <div class="metric">
+              UP
+              <strong>${formatUptime(server.uptime_seconds)}</strong>
+            </div>
+          </div>
+
+          ${actions}
+
+          ${server.unavailable_reason && !running
+            ? `<div class="unavailable">${escapeHtml(server.unavailable_reason)}</div>`
+            : ''}
+        `;
+
+        card.querySelectorAll('[data-action]').forEach(button =>
+          button.addEventListener(
+            'click',
+            () => runMinecraftAction(server, button.dataset.action)
+          )
+        );
+
+        return card;
+      }));
+    }
+
+    function renderWhitelist(players) {
+      const panel = document.querySelector('#wonton26-whitelist');
+      if (!hasPermission('minecraft.wonton26.whitelist')) {
+        panel.hidden = true;
+        return;
+      }
+
+      panel.hidden = false;
+      panel.innerHTML = `
+        <div class="card-top">
+          <h2>WONTON26 WHITELIST</h2>
+          <span class="meta">${players.length} PLAYER${players.length === 1 ? '' : 'S'}</span>
+        </div>
+        <div class="whitelist-players">
+          ${players.length ? players.map(player => `
+            <div class="whitelist-player">
+              <span>${escapeHtml(player.username)}</span>
+              ${player.protected
+                ? '<span class="protected-label">PROTECTED</span>'
+                : `<button class="shutdown" data-remove-player="${escapeHtml(player.username)}"
+                    ${whitelistRunning ? 'disabled' : ''}>REMOVE</button>`}
+            </div>
+          `).join('') : '<div class="meta">NO WHITELISTED PLAYERS REPORTED</div>'}
+        </div>
+        <form id="whitelist-add-form" class="whitelist-form">
+          <input name="username" aria-label="Minecraft username" required minlength="3" maxlength="16"
+            pattern="[A-Za-z0-9_]{3,16}" autocomplete="off" spellcheck="false"
+            placeholder="MINECRAFT USERNAME" ${whitelistRunning ? 'disabled' : ''}>
+          <button type="submit" ${whitelistRunning ? 'disabled' : ''}>ADD</button>
+        </form>
+      `;
+
+      panel.querySelector('#whitelist-add-form').addEventListener('submit', runWhitelistAdd);
+      panel.querySelectorAll('[data-remove-player]').forEach(button =>
+        button.addEventListener('click', () => runWhitelistRemove(button.dataset.removePlayer))
+      );
+    }
+
+    async function refreshWhitelist({ quiet = false } = {}) {
+      if (!hasPermission('minecraft.wonton26.whitelist') || whitelistRunning) {
+        return;
+      }
+      const request = ++whitelistRequest;
+      try {
+        const data = await api('/api/v1/minecraft/wonton26/whitelist');
+        if (request !== whitelistRequest || whitelistRunning) {
+          return;
+        }
+        whitelistPlayers = data.players || [];
+        renderWhitelist(whitelistPlayers);
+      } catch (error) {
+        if (!quiet && currentUser) {
+          setStatus(`WONTON26 WHITELIST // ${error.message}`, 'error');
+        }
+      }
+    }
+
+    async function runWhitelistAdd(event) {
+      event.preventDefault();
+      if (whitelistRunning) {
+        return;
+      }
+      const username = event.target.username.value;
+      whitelistRunning = true;
+      whitelistRequest += 1;
+      renderWhitelist(whitelistPlayers);
+      setStatus('WONTON26 WHITELIST // ADDING PLAYER');
+      try {
+        const result = await api('/api/v1/minecraft/wonton26/whitelist/players', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({username})
+        });
+        setStatus(`SUCCESS // ${result.message}`, 'success');
+      } catch (error) {
+        setStatus(`WONTON26 WHITELIST FAILED // ${error.message}`, 'error');
+      } finally {
+        whitelistRunning = false;
+        await refreshWhitelist({quiet: true});
+      }
+    }
+
+    async function runWhitelistRemove(username) {
+      if (
+        whitelistRunning ||
+        !confirm(`REMOVE ${username} FROM THE WONTON26 WHITELIST?`)
+      ) {
+        return;
+      }
+      whitelistRunning = true;
+      whitelistRequest += 1;
+      renderWhitelist(whitelistPlayers);
+      setStatus(`WONTON26 WHITELIST // REMOVING ${username}`);
+      try {
+        const result = await api(
+          `/api/v1/minecraft/wonton26/whitelist/players/${encodeURIComponent(username)}`,
+          {method: 'DELETE'}
+        );
+        setStatus(`SUCCESS // ${result.message}`, 'success');
+      } catch (error) {
+        setStatus(`WONTON26 WHITELIST FAILED // ${error.message}`, 'error');
+      } finally {
+        whitelistRunning = false;
+        await refreshWhitelist({quiet: true});
+      }
+    }
+
+    async function refreshMinecraft({ quiet = false } = {}) {
+      try {
+        const data = await api('/api/v1/minecraft/servers');
+
+        renderMinecraft(data.servers);
+        await refreshWhitelist({ quiet });
+
+        if (!quiet && !actionRunning && currentUser.role !== 'admin') {
+          setStatus(
+            `ONLINE // ${data.servers.length} APPROVED SERVERS`
+          );
+        }
+      } catch (error) {
+        if (currentUser) {
+          setStatus(`LINK FAILURE // ${error.message}`, 'error');
+        }
+      }
+    }
+
+    async function pollTask(path, accepted, verb) {
+      const started = Date.now();
+
+      while (Date.now() - started < 300000) {
+        const elapsed = Math.floor((Date.now() - started) / 1000);
+
+        const result = await api(
+          `${path}/${accepted.node}/${encodeURIComponent(accepted.task)}`
+        );
+
+        const task = result.task || {};
+
+        setStatus(
+          `${verb} ACCEPTED // VMID ${accepted.vmid} // ` +
+          `${String(task.status || 'PENDING').toUpperCase()} // ${elapsed}S`
+        );
+
+        if (task.status === 'stopped') {
+          if (task.exitstatus !== 'OK') {
+            throw new Error(task.exitstatus || 'Proxmox task failed');
+          }
+
+          setStatus(
+            `SUCCESS // ${verb} VMID ${accepted.vmid} // ${elapsed}S`,
+            'success'
+          );
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      throw new Error('Timed out after 5 minutes');
+    }
+
+    async function runAdminAction(guest, action) {
+      if (
+        guest.vmid === protectedVmid ||
+        actionRunning ||
+        !confirm(`${action.toUpperCase()} VM ${guest.vmid} (${guest.name})?`)
+      ) {
+        return;
+      }
+
+      actionRunning = true;
+      setStatus(`SENDING ${action.toUpperCase()} // VMID ${guest.vmid}`);
+
+      try {
+        const accepted = await api(
+          `/api/v1/proxmox/guests/${guest.vmid}/${action}`,
+          { method: 'POST' }
+        );
+
+        await pollTask(
+          '/api/v1/proxmox/tasks',
+          { ...accepted, node: guest.node },
+          action.toUpperCase()
+        );
+      } catch (error) {
+        setStatus(`FAILED // ${error.message}`, 'error');
+      } finally {
+        actionRunning = false;
+        await refreshAdmin({ quiet: true });
+      }
+    }
+
+    async function runFambamStart(server) {
+      if (
+        actionRunning ||
+        !confirm(`START ${server.name}?\n\nWake the configured host and start the Minecraft server.`)
+      ) {
+        return;
+      }
+
+      actionRunning = true;
+      setStatus('FAMBAM22 // SENDING WAKE-ON-LAN');
+
+      try {
+        const accepted = await api(
+          '/api/v1/minecraft/physical/fambam22/start',
+          { method: 'POST' }
+        );
+
+        if (!accepted.accepted) {
+          setStatus(
+            `FAMBAM22 // ${accepted.message}`,
+            'success'
+          );
+          return;
+        }
+
+        const started = Date.now();
+        const timeout = 180000;
+
+        while (Date.now() - started < timeout) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          const data = await api('/api/v1/minecraft/servers');
+          renderMinecraft(data.servers);
+
+          const fambam = data.servers.find(
+            item => item.id === 'fambam22'
+          );
+
+          const elapsed =
+            Math.floor((Date.now() - started) / 1000);
+
+          if (fambam && fambam.status === 'running') {
+            setStatus(
+              `SUCCESS // FAMBAM22 ONLINE // ${elapsed}S`,
+              'success'
+            );
+            return;
+          }
+
+          setStatus(
+            `FAMBAM22 // BOOTING + WAITING FOR MINECRAFT // ${elapsed}S`
+          );
+        }
+
+        throw new Error(
+          'FAMBAM22 did not report online within 3 minutes'
+        );
+      } catch (error) {
+        setStatus(
+          `FAMBAM22 START FAILED // ${error.message}`,
+          'error'
+        );
+      } finally {
+        actionRunning = false;
+
+        if (currentUser?.role === 'admin') {
+          await refreshAdmin({ quiet: true });
+        }
+
+        await refreshMinecraft({ quiet: true });
+      }
+    }
+
+
+    async function runFambamShutdown(server) {
+      if (
+        actionRunning ||
+        !confirm(
+          `SAFE SHUTDOWN ${server.name}?\n\n` +
+          `This will save the world, create a NAS backup, ` +
+          `and power off the configured host.`
+        )
+      ) {
+        return;
+      }
+
+      actionRunning = true;
+      setStatus('FAMBAM22 // SAFE SHUTDOWN REQUESTED');
+
+      try {
+        await api('/api/v1/minecraft/physical/fambam22/stop', {
+          method: 'POST'
+        });
+
+        const started = Date.now();
+        const timeout = 180000;
+
+        while (Date.now() - started < timeout) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          const data = await api('/api/v1/minecraft/servers');
+          renderMinecraft(data.servers);
+
+          const fambam = data.servers.find(
+            item => item.id === 'fambam22'
+          );
+
+          const elapsed =
+            Math.floor((Date.now() - started) / 1000);
+
+          if (!fambam || fambam.status === 'stopped') {
+            setStatus(
+              `SUCCESS // FAMBAM22 OFFLINE // ${elapsed}S`,
+              'success'
+            );
+            return;
+          }
+
+          setStatus(
+            `FAMBAM22 // SAVING + BACKING UP + SHUTTING DOWN // ${elapsed}S`
+          );
+        }
+
+        throw new Error(
+          'FAMBAM22 did not report offline within 3 minutes'
+        );
+      } catch (error) {
+        setStatus(
+          `FAMBAM22 SHUTDOWN FAILED // ${error.message}`,
+          'error'
+        );
+      } finally {
+        actionRunning = false;
+
+        if (currentUser?.role === 'admin') {
+          await refreshAdmin({ quiet: true });
+        }
+
+        await refreshMinecraft({ quiet: true });
+      }
+    }
+
+
+    async function runMinecraftAction(server, action) {
+      /*
+       * Physical FAMBAM22 controls are intentionally not connected yet.
+       */
+      if (server.id === 'fambam22') {
+        return;
+      }
+
+      if (
+        actionRunning ||
+        !confirm(`${action.toUpperCase()} ${server.name}?`)
+      ) {
+        return;
+      }
+
+      actionRunning = true;
+      setStatus(`SENDING ${action.toUpperCase()} // ${server.name}`);
+      await refreshMinecraft({ quiet: true });
+
+      try {
+        const accepted = await api(
+          `/api/v1/minecraft/servers/${server.vmid}/${action}`,
+          { method: 'POST' }
+        );
+
+        await pollTask(
+          '/api/v1/minecraft/tasks',
+          accepted,
+          action.toUpperCase()
+        );
+      } catch (error) {
+        setStatus(`FAILED // ${error.message}`, 'error');
+      } finally {
+        actionRunning = false;
+        await refreshMinecraft({ quiet: true });
+      }
+    }
+
+    document
+      .querySelector('#login-form')
+      .addEventListener('submit', async event => {
+        event.preventDefault();
+
+        const button = event.target.querySelector('button');
+        button.disabled = true;
+
+        document.querySelector('#login-error').textContent = '';
+
+        try {
+          const data = await api('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: event.target.username.value,
+              password: event.target.password.value
+            })
+          });
+
+          csrfToken = data.csrf_token;
+          event.target.reset();
+          showApp(data.user);
+        } catch (error) {
+          document.querySelector('#login-error').textContent =
+            error.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+    document
+      .querySelector('#logout')
+      .addEventListener('click', async () => {
+        try {
+          await api('/api/v1/auth/logout', { method: 'POST' });
+        } finally {
+          showLogin('Signed out.');
+        }
+      });
+
+    document.querySelectorAll('.refresh').forEach(button =>
+      button.addEventListener('click', async () => {
+        if (!currentUser) {
+          return;
+        }
+
+        if (currentUser.role === 'admin') {
+          await refreshAdmin();
+          await refreshMinecraft({ quiet: true });
+        } else {
+          await refreshMinecraft();
+        }
+      })
+    );
+
+
+    async function initialize() {
+      try {
+        const data = await api('/api/v1/auth/me');
+
+        csrfToken = data.csrf_token;
+        showApp(data.user);
+      } catch {
+        showLogin();
+      }
+    }
+
+    initialize();
+
+    setInterval(async () => {
+      if (!currentUser || actionRunning || whitelistRunning) {
+        return;
+      }
+
+      if (currentUser.role === 'admin') {
+        await refreshAdmin({ quiet: true });
+        await refreshMinecraft({ quiet: true });
+      } else {
+        await refreshMinecraft({ quiet: true });
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
